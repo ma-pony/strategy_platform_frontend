@@ -1,0 +1,136 @@
+export type StrategyIntroduction = {
+  id: string;
+  kind: "signal" | "weights" | "opportunity" | "position_sizing";
+  displayName: string;
+  coreIdea: string;
+  indicators: string[];
+  entryRules: string[];
+  exitRules: string[];
+  riskNotes: string[];
+  sourceCallable: string;
+};
+
+export const STRATEGY_INTRODUCTIONS: StrategyIntroduction[] = [
+  {
+    id: "turtle_trading",
+    kind: "signal",
+    displayName: "海龟交易（唐奇安突破趋势跟随）",
+    coreIdea: "用唐奇安通道的价格突破捕捉大趋势，信号简单但要求严格执行纪律；典型做法同时允许做多与做空，并用更短周期通道作为退出。",
+    indicators: ["Donchian 通道（20/55 突破）", "Donchian 退出通道（10）"],
+    entryRules: ["收盘价突破 20 日或 55 日最高价 → 做多", "收盘价跌破 20 日或 55 日最低价 → 做空"],
+    exitRules: ["做多：收盘价跌破 10 日最低价 → 平多", "做空：收盘价突破 10 日最高价 → 平空"],
+    riskNotes: ["趋势策略在震荡期可能频繁止损", "需要与仓位/波动率预算配合，避免单笔回撤过大"],
+    sourceCallable: "turtle_trading",
+  },
+  {
+    id: "donchian_channel_breakout",
+    kind: "signal",
+    displayName: "唐奇安通道突破（简化版）",
+    coreIdea: "用固定回看窗口的最高/最低价作为突破边界，突破即顺势入场，用更短窗口作为退出，属于经典规则化趋势系统。",
+    indicators: ["Donchian 通道（lookback）", "Donchian 退出通道（exit_lookback）"],
+    entryRules: ["收盘价突破通道上轨 → 做多", "收盘价跌破通道下轨 → 做空"],
+    exitRules: ["做多：收盘价跌破退出下轨 → 平多", "做空：收盘价突破退出上轨 → 平空"],
+    riskNotes: ["窗口越短信号越密集、噪声越大", "在跳空与快速反转行情中易被来回打止损"],
+    sourceCallable: "donchian_channel_breakout",
+  },
+  {
+    id: "bollinger_band_mean_reversion",
+    kind: "signal",
+    displayName: "布林带均值回归",
+    coreIdea: "把价格偏离均值视为可回归的统计波动：触及上下轨尝试反转，回到中轨止盈/平仓。适合震荡期，怕单边大趋势。",
+    indicators: ["Bollinger Bands（中轨=20SMA，上下轨=±2σ）"],
+    entryRules: ["收盘价跌破下轨 → 做多", "收盘价突破上轨 → 做空"],
+    exitRules: ["做多：收盘价回到/高于中轨 → 平多", "做空：收盘价回到/低于中轨 → 平空"],
+    riskNotes: ["单边趋势中会出现“越跌越买/越涨越卖”的风险", "建议增加趋势过滤（例如均线方向）或硬止损"],
+    sourceCallable: "bollinger_band_mean_reversion",
+  },
+  {
+    id: "rsi_mean_reversion",
+    kind: "signal",
+    displayName: "RSI 超买超卖均值回归",
+    coreIdea: "用 RSI 的超买/超卖阈值作为过度波动的信号：极端区间做反向，回到中性区间退出。",
+    indicators: ["RSI（默认 14）"],
+    entryRules: ["RSI < oversold（默认 30）→ 做多", "RSI > overbought（默认 70）→ 做空"],
+    exitRules: ["做多：RSI 回到/高于 50 → 平多", "做空：RSI 回到/低于 50 → 平空"],
+    riskNotes: ["强趋势行情中 RSI 可长时间停留在极端区间", "阈值对不同标的/周期敏感，需要稳健性测试"],
+    sourceCallable: "rsi_mean_reversion",
+  },
+  {
+    id: "macd_trend_following",
+    kind: "signal",
+    displayName: "MACD 趋势跟随",
+    coreIdea: "通过快慢 EMA 差值（MACD）与信号线的交叉识别趋势切换，交叉即入场/反手，属于经典动量跟随系统。",
+    indicators: ["MACD（fast/slow）", "Signal line"],
+    entryRules: ["MACD 线上穿 Signal → 做多", "MACD 线下穿 Signal → 做空"],
+    exitRules: ["做多：MACD 线下穿 Signal → 平多", "做空：MACD 线上穿 Signal → 平空"],
+    riskNotes: ["横盘震荡会产生较多假信号", "可用柱体强弱、均线方向或波动率过滤减少噪声"],
+    sourceCallable: "macd_trend_following",
+  },
+  {
+    id: "stochastic_oscillator_reversal",
+    kind: "signal",
+    displayName: "随机指标（KD）超买超卖反转",
+    coreIdea: "用 KD 在超买/超卖区间的金叉/死叉捕捉短线反转，回到中性区域退出。",
+    indicators: ["Stochastic %K/%D（默认 14/3/3）"],
+    entryRules: ["%K 上穿 %D 且 %K < oversold（默认 20）→ 做多", "%K 下穿 %D 且 %K > overbought（默认 80）→ 做空"],
+    exitRules: ["做多：%K >= 50 → 平多", "做空：%K <= 50 → 平空"],
+    riskNotes: ["更偏短周期策略，交易成本与滑点影响更大", "在趋势中反转信号可能连续失败"],
+    sourceCallable: "stochastic_oscillator_reversal",
+  },
+  {
+    id: "ichimoku_cloud_trend",
+    kind: "signal",
+    displayName: "一目均衡表趋势策略",
+    coreIdea: "用云层判断趋势区域（上方偏多、下方偏空），用转换线/基准线交叉作为触发，离场参考基准线或反向交叉。",
+    indicators: ["Ichimoku 云（Span A/B）", "Tenkan/Kijun"],
+    entryRules: ["价格在云层上方且 Tenkan 上穿 Kijun → 做多", "价格在云层下方且 Tenkan 下穿 Kijun → 做空"],
+    exitRules: ["做多：价格跌破 Kijun 或出现下穿交叉 → 平多", "做空：价格突破 Kijun 或出现上穿交叉 → 平空"],
+    riskNotes: ["云层位移导致信号滞后，适合波段/趋势行情", "盘整期交叉频繁，需要过滤"],
+    sourceCallable: "ichimoku_cloud_trend",
+  },
+  {
+    id: "parabolic_sar_trend",
+    kind: "signal",
+    displayName: "抛物线 SAR 趋势跟随",
+    coreIdea: "SAR 点位提供跟踪止损与反转信号：价格上穿 SAR 做多，下穿做空；反向触发同时承担退出。",
+    indicators: ["Parabolic SAR（af_step/af_max）"],
+    entryRules: ["收盘价上穿 SAR → 做多", "收盘价下穿 SAR → 做空"],
+    exitRules: ["做多：出现下穿信号 → 平多", "做空：出现上穿信号 → 平空"],
+    riskNotes: ["强趋势中效果较好，震荡中容易来回反转", "参数 af 会影响追踪速度与止损距离"],
+    sourceCallable: "parabolic_sar_trend",
+  },
+  {
+    id: "keltner_channel_breakout",
+    kind: "signal",
+    displayName: "凯尔特纳通道突破",
+    coreIdea: "用 EMA 为中轴、ATR 构造波动自适应通道；波动扩张阶段更容易突破通道，适合捕捉趋势启动或加速。",
+    indicators: ["Keltner Channel（EMA+ATR）"],
+    entryRules: ["收盘价突破上轨 → 做多", "收盘价跌破下轨 → 做空"],
+    exitRules: ["做多：收盘价回落到/跌破中轨 → 平多", "做空：收盘价反弹到/突破中轨 → 平空"],
+    riskNotes: ["对 ATR 与周期选择敏感", "可加趋势过滤或分批止盈改善回撤"],
+    sourceCallable: "keltner_channel_breakout",
+  },
+  {
+    id: "aroon_trend_system",
+    kind: "signal",
+    displayName: "Aroon 趋势识别与跟随",
+    coreIdea: "Aroon 用“距离最近高点/低点的天数”刻画趋势强弱。通过 Aroon Up/Down 的交叉与阈值过滤，避免弱趋势噪声。",
+    indicators: ["Aroon Up/Down（lookback）"],
+    entryRules: ["Aroon Up 上穿 Aroon Down 且 Up>50、Down<50 → 做多", "Aroon Down 上穿 Aroon Up 且 Down>50、Up<50 → 做空"],
+    exitRules: ["做多：Up<50 或出现反向交叉 → 平多", "做空：Down<50 或出现反向交叉 → 平空"],
+    riskNotes: ["本质仍是趋势跟随，震荡期会有假突破", "更适合较高周期或配合波动过滤"],
+    sourceCallable: "aroon_trend_system",
+  },
+  {
+    id: "nr7_volatility_contraction_breakout",
+    kind: "signal",
+    displayName: "NR7 波动收缩突破",
+    coreIdea: "先找“近 N 天里波动最小的一天”（波动收缩），再用该日高/低作为突破触发点，属于“收缩-扩张”交易范式。",
+    indicators: ["日内振幅（high-low）", "NR7 标记"],
+    entryRules: ["收盘价突破上一根 NR7 高点 → 做多", "收盘价跌破上一根 NR7 低点 → 做空"],
+    exitRules: ["做多：收盘价跌破 NR7 低点 → 平多", "做空：收盘价突破 NR7 高点 → 平空"],
+    riskNotes: ["对缺口跳空与极端波动敏感", "适合与事件/波动扩张环境联动分析"],
+    sourceCallable: "nr7_volatility_contraction_breakout",
+  },
+];
+
