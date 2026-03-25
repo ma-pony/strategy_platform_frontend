@@ -1,5 +1,22 @@
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api/v1";
 
+/** Backend business error codes */
+export const API_CODE = {
+  SUCCESS: 0,
+  AUTH_FAILED: 1001,
+  FORBIDDEN: 1002,
+  MEMBERSHIP_INSUFFICIENT: 1003,
+  LOGIN_FAILED: 1004,
+  ACCOUNT_DISABLED: 1005,
+  VALIDATION_ERROR: 2001,
+  NOT_FOUND: 3001,
+  CONFLICT: 3002,
+  UNSUPPORTED_STRATEGY_TYPE: 3003,
+  EMAIL_TAKEN: 3010,
+  SERVER_ERROR: 5000,
+  ENGINE_ERROR: 5001,
+} as const;
+
 type ApiResponse<T> = {
   code: number;
   message: string;
@@ -114,26 +131,48 @@ export async function request<T>(path: string, opts: RequestOptions = {}): Promi
     }
   }
 
-  let res = await fetch(url, {
-    method,
-    headers,
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method,
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  } catch (err) {
+    throw new ApiError(
+      err instanceof TypeError ? "网络连接失败，请检查网络后重试" : "请求失败",
+      -1,
+      0,
+    );
+  }
 
   // Auto-refresh on 401
   if (res.status === 401 && auth) {
     const newToken = await refreshAccessToken();
     if (newToken) {
       headers["Authorization"] = `Bearer ${newToken}`;
-      res = await fetch(url, {
-        method,
-        headers,
-        body: body ? JSON.stringify(body) : undefined,
-      });
+      try {
+        res = await fetch(url, {
+          method,
+          headers,
+          body: body ? JSON.stringify(body) : undefined,
+        });
+      } catch (err) {
+        throw new ApiError(
+          err instanceof TypeError ? "网络连接失败，请检查网络后重试" : "请求失败",
+          -1,
+          0,
+        );
+      }
     }
   }
 
-  const json = (await res.json()) as ApiResponse<T>;
+  let json: ApiResponse<T>;
+  try {
+    json = (await res.json()) as ApiResponse<T>;
+  } catch {
+    throw new ApiError("服务器返回格式异常", -1, res.status);
+  }
 
   if (!res.ok || json.code !== 0) {
     throw new ApiError(json.message || "请求失败", json.code, res.status);

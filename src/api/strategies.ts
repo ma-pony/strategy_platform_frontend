@@ -1,5 +1,5 @@
 import { request } from "./client";
-import type { PaginatedData, StrategyRead, BacktestResultRead, SignalRead, PairMetricsRead } from "./types";
+import type { PaginatedData, StrategyRead, BacktestResultRead, SignalsWithTimestamp, PairMetricsRead } from "./types";
 
 export async function listStrategies(page = 1, pageSize = 20): Promise<PaginatedData<StrategyRead>> {
   return request<PaginatedData<StrategyRead>>("/strategies", {
@@ -21,12 +21,14 @@ export async function getBacktest(backtestId: number): Promise<BacktestResultRea
   return request<BacktestResultRead>(`/backtests/${backtestId}`);
 }
 
-export async function listSignals(strategyId: number, limit = 20): Promise<{ signals: SignalRead[]; last_updated_at: string | null }> {
-  return request<{ signals: SignalRead[]; last_updated_at: string | null }>(`/strategies/${strategyId}/signals`, {
+/** GET /strategies/:id/signals — latest N signals (not paginated) */
+export async function listSignals(strategyId: number, limit = 20): Promise<SignalsWithTimestamp> {
+  return request<SignalsWithTimestamp>(`/strategies/${strategyId}/signals`, {
     params: { limit },
   });
 }
 
+/** GET /strategies/:id/pair-metrics — paginated with optional filters */
 export async function listPairMetrics(
   strategyId: number,
   opts?: { pair?: string; timeframe?: string; page?: number; pageSize?: number }
@@ -39,4 +41,14 @@ export async function listPairMetrics(
       page_size: opts?.pageSize || 20,
     },
   });
+}
+
+/** GET /strategies/:id/pair-metrics/:pair/:timeframe — single pair metric */
+export async function getPairMetric(
+  strategyId: number,
+  pair: string,
+  timeframe: string,
+): Promise<PairMetricsRead> {
+  const encodedPair = encodeURIComponent(pair);
+  return request<PairMetricsRead>(`/strategies/${strategyId}/pair-metrics/${encodedPair}/${timeframe}`);
 }

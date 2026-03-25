@@ -13,11 +13,11 @@ export default function LockBadge(props: { reason: PaywallReason; strategyId?: s
       type="button"
       onClick={() => open({ reason: props.reason, strategyId: props.strategyId, returnTo: location.pathname + location.search })}
       className={cn(
-        "inline-flex items-center gap-1 rounded-full bg-white/5 px-2 py-0.5 text-[11px] text-white/70 ring-1 ring-white/10 transition hover:bg-white/10",
+        "inline-flex items-center gap-1 rounded-full bg-[color:var(--accent-soft)] px-2 py-0.5 text-xs text-[color:var(--accent)] transition hover:bg-[color:var(--accent)]/20",
         props.className,
       )}
     >
-      <Lock className="size-3" />
+      <Lock className="size-3" aria-hidden="true" />
       会员
     </button>
   );

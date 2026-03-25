@@ -3,17 +3,20 @@
 @tailwind utilities;
 
 :root {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+  font-family: "Outfit", system-ui, sans-serif;
   line-height: 1.5;
   font-weight: 400;
 
-  --bg: #0b1220;
-  --card: #111a2e;
-  --text: #e6edf7;
-  --muted: #aab6d1;
-  --accent: #4f8cff;
-  --success: #2ed47a;
-  --danger: #ff4d4f;
+  --bg: #0a0e14;
+  --card: #111820;
+  --surface: #191f2a;
+  --text: #e2e8f0;
+  --muted: #94a3b8;
+  --accent: #c9a55a;
+  --accent-soft: rgba(201, 165, 90, 0.12);
+  --success: #34d399;
+  --danger: #f87171;
+  --admin: #c084fc;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -29,6 +32,8 @@ body {
 body {
   margin: 0;
   background: var(--bg);
+  background-image: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(201, 165, 90, 0.06) 0%, transparent 60%);
+  background-attachment: fixed;
   color: var(--text);
 }
 
@@ -36,20 +41,84 @@ a {
   color: var(--accent);
 }
 
+/* Focus-visible for accessibility */
+*:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Tabular numbers */
+.tabular-nums {
+  font-family: "JetBrains Mono", "Outfit", monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Entry animations */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.97); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.animate-in {
+  animation: slide-up 0.35s ease-out both;
+}
+
+.animate-fade {
+  animation: fade-in 0.3s ease-out both;
+}
+
+.animate-scale {
+  animation: scale-in 0.25s ease-out both;
+}
+
+/* Staggered children */
+.stagger > :nth-child(1) { animation-delay: 0ms; }
+.stagger > :nth-child(2) { animation-delay: 50ms; }
+.stagger > :nth-child(3) { animation-delay: 100ms; }
+.stagger > :nth-child(4) { animation-delay: 150ms; }
+.stagger > :nth-child(5) { animation-delay: 200ms; }
+.stagger > :nth-child(6) { animation-delay: 250ms; }
+.stagger > :nth-child(7) { animation-delay: 300ms; }
+.stagger > :nth-child(8) { animation-delay: 350ms; }
+
+/* Scrollbar */
 * {
-  scrollbar-color: rgba(230, 237, 247, 0.18) rgba(255, 255, 255, 0.04);
+  scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
 }
 
 *::-webkit-scrollbar {
-  height: 10px;
-  width: 10px;
+  height: 8px;
+  width: 8px;
 }
 
 *::-webkit-scrollbar-thumb {
-  background: rgba(230, 237, 247, 0.18);
+  background: rgba(255, 255, 255, 0.12);
   border-radius: 999px;
 }
 
 *::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.04);
+  background: transparent;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

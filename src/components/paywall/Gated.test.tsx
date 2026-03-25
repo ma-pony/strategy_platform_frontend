@@ -7,7 +7,7 @@ import { useAuthStore } from "@/stores/authStore";
 
 describe("Gated", () => {
   it("renders children when allowed", () => {
-    useAuthStore.getState().setPlan("member");
+    useAuthStore.setState({ plan: "member" });
     render(
       <MemoryRouter>
         <Gated require="can_download_strategy" reason="download_strategy" deniedMode="BLUR">
@@ -19,7 +19,7 @@ describe("Gated", () => {
   });
 
   it("renders fallback when denied", () => {
-    useAuthStore.getState().setPlan("guest");
+    useAuthStore.setState({ plan: "guest" });
     render(
       <MemoryRouter>
         <Gated require="can_download_strategy" reason="download_strategy" deniedMode="BLUR" fallback={<div>LOCKED</div>}>

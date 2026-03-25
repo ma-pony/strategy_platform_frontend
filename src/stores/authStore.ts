@@ -30,21 +30,20 @@ type AuthState = {
   loginAsync(email: string, password: string): Promise<void>;
   registerAsync(email: string, password: string): Promise<void>;
   logout(): void;
-  setPlan(plan: Plan): void;
-  grantStrategy(input: { strategyId: string; expiresAt?: string | null }): void;
   hasActiveGrant(strategyId: string): boolean;
   clearError(): void;
 };
 
 function membershipToPlan(membership: string): Plan {
-  switch (membership) {
-    case "VIP1":
-    case "VIP2":
-    case "VIP3":
+  switch (membership.toLowerCase()) {
+    case "vip1":
+    case "vip2":
+    case "vip3":
       return "member";
-    case "ADMIN":
+    case "admin":
       return "admin";
-    case "FREE":
+    case "free":
+      return "free";
     default:
       return "free";
   }
@@ -127,26 +126,6 @@ export const useAuthStore = create<AuthState>()(
         });
       },
 
-      setPlan: (plan) => {
-        if (plan === "guest") {
-          clearTokens();
-          set({
-            plan: "guest",
-            user: null,
-            subscription: { status: "inactive", currentPeriodEnd: null, autoRenew: false },
-          });
-          return;
-        }
-        set({ plan, subscription: planToSubscription(plan) });
-      },
-
-      grantStrategy: ({ strategyId, expiresAt = null }) => {
-        const cur = get();
-        const next = cur.grants.filter((g) => g.strategyId !== strategyId);
-        next.push({ strategyId, expiresAt });
-        set({ grants: next });
-      },
-
       hasActiveGrant: (strategyId) => {
         const cur = get();
         const g = cur.grants.find((x) => x.strategyId === strategyId);
@@ -160,7 +139,16 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: "sp_auth_v2",
-      version: 2,
+      version: 3,
+      migrate: (persisted) => {
+        const old = persisted as Record<string, unknown> | null;
+        return {
+          user: old?.user ?? null,
+          plan: old?.plan === "member" || old?.plan === "admin" ? "free" as Plan : (old?.plan as Plan) ?? "guest",
+          subscription: { status: "inactive" as SubscriptionStatus, currentPeriodEnd: null, autoRenew: false },
+          grants: [] as StrategyGrant[],
+        };
+      },
       partialize: (state) => ({
         user: state.user,
         plan: state.plan,

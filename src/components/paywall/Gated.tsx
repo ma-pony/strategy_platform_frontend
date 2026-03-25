@@ -43,6 +43,7 @@ export default function Gated(props: GatedProps) {
       }}
       role="button"
       tabIndex={0}
+      aria-label="需要会员权限，点击了解详情"
     >
       {fallback}
     </div>

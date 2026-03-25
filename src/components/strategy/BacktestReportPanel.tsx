@@ -28,16 +28,16 @@ export default function BacktestReportPanel(props: {
   ];
 
   return (
-    <div className={cn("rounded-2xl bg-[color:var(--card)] p-5 ring-1 ring-white/10", props.className)}>
+    <div className={cn("rounded-xl bg-[color:var(--card)] p-5 border border-white/[0.06]", props.className)}>
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
           <div className="flex items-center gap-2">
             <div className="text-sm font-semibold text-white">回测报告</div>
             <LockBadge reason="backtest_full" strategyId={props.strategyId} className="md:hidden" />
           </div>
-          <div className="mt-0.5 flex items-center gap-2 text-xs text-white/55">
+          <div className="mt-0.5 flex items-center gap-2 text-xs text-white/45">
             <Info className="size-4" />
-            <span>口径一致、假设可见、版本可追溯</span>
+            <span>统一指标定义，公开回测假设</span>
           </div>
         </div>
         <Gated
@@ -49,7 +49,7 @@ export default function BacktestReportPanel(props: {
         >
           <button
             type="button"
-            className="inline-flex items-center justify-center gap-2 rounded-lg bg-white/5 px-4 py-2 text-sm text-white/85 ring-1 ring-white/10 transition hover:bg-white/10"
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-white/5 px-4 py-2 text-sm text-white/85 border border-white/[0.06] transition hover:bg-white/10"
           >
             <FileDown className="size-4" />
             导出报告
@@ -81,7 +81,7 @@ export default function BacktestReportPanel(props: {
                 reason="backtest_full"
                 strategyId={props.strategyId}
                 deniedMode="BLUR"
-                fallback={<LockedStrip label="扩展指标（会员）" />}
+                fallback={<LockedStrip label="更多指标" />}
               >
                 <div className="grid gap-3 md:grid-cols-4">
                   {ext.map((m) => (
@@ -92,7 +92,7 @@ export default function BacktestReportPanel(props: {
             </div>
           </Section>
 
-          <Section title="口径说明与免责声明">
+          <Section title="假设说明与风险提示">
             <ul className="grid list-disc gap-1 pl-5 text-sm text-white/70">
               <li>历史回测不代表未来表现</li>
               <li>滑点与可成交性不确定，尤其在波动与低流动性时段</li>
@@ -105,7 +105,7 @@ export default function BacktestReportPanel(props: {
         <div className="grid gap-4">
           <Section title="研究提示">
             <div className="text-sm text-white/70">
-              传统金融研究站通常把"口径与版本披露"作为可信度核心。你可以在策略说明页统一查看指标定义、年化方式与排名逻辑。
+              所有指标均采用统一定义与年化方式。如需了解详细说明，可查看策略说明页。
             </div>
           </Section>
         </div>
@@ -116,7 +116,7 @@ export default function BacktestReportPanel(props: {
 
 function Section(props: { title: string; children: ReactNode }) {
   return (
-    <section className="rounded-2xl bg-white/5 p-4 ring-1 ring-white/10">
+    <section className="rounded-xl bg-white/5 p-4 border border-white/[0.06]">
       <div className="text-sm font-semibold text-white">{props.title}</div>
       <div className="mt-3">{props.children}</div>
     </section>
@@ -129,8 +129,8 @@ function Grid2(props: { children: ReactNode }) {
 
 function KV(props: { label: string; value: string; tone?: "muted" }) {
   return (
-    <div className="rounded-xl bg-white/5 p-3 ring-1 ring-white/10">
-      <div className="text-[11px] text-white/55">{props.label}</div>
+    <div className="rounded-xl bg-white/5 p-3 border border-white/[0.06]">
+      <div className="text-xs text-white/45">{props.label}</div>
       <div className={cn("mt-1 text-sm font-medium text-white tabular-nums", props.tone === "muted" && "text-white/60")}>{props.value}</div>
     </div>
   );
@@ -138,8 +138,8 @@ function KV(props: { label: string; value: string; tone?: "muted" }) {
 
 function Metric(props: { label: string; value: string }) {
   return (
-    <div className="rounded-xl bg-white/5 p-4 ring-1 ring-white/10">
-      <div className="text-xs text-white/55">{props.label}</div>
+    <div className="rounded-xl bg-white/5 p-4 border border-white/[0.06]">
+      <div className="text-xs text-white/45">{props.label}</div>
       <div className="mt-2 text-lg font-semibold text-white tabular-nums">{props.value}</div>
     </div>
   );
@@ -147,10 +147,10 @@ function Metric(props: { label: string; value: string }) {
 
 function LockedStrip(props: { label: string }) {
   return (
-    <div className="rounded-xl bg-white/5 p-3 ring-1 ring-white/10">
+    <div className="rounded-xl bg-white/5 p-3 border border-white/[0.06]">
       <div className="flex items-center justify-between gap-2">
         <div className="text-sm font-medium text-white/80">{props.label}</div>
-        <span className="rounded-full bg-[color:var(--accent)]/15 px-2 py-0.5 text-[11px] text-[color:var(--accent)]">解锁</span>
+        <span className="rounded-full bg-[color:var(--accent)]/15 px-2 py-0.5 text-xs text-[color:var(--accent)]">解锁</span>
       </div>
       <div className="mt-3 grid gap-2">
         <div className="h-2 w-11/12 rounded bg-white/10" />

@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 
 import {
   ALL_ENTITLEMENTS,
@@ -22,12 +22,27 @@ export type StrategyEntitlements = {
   entitlements: Partial<Entitlements>;
 };
 
-function getEmptyEntitlements(): Entitlements {
-  return ALL_ENTITLEMENTS.reduce((acc, k) => {
-    acc[k] = false;
-    return acc;
-  }, {} as Entitlements);
-}
+const GRANT_ELIGIBLE_KEYS: EntitlementKey[] = [
+  "can_download_strategy",
+  "can_view_signals_realtime",
+  "can_view_signal_price",
+  "can_view_signal_strength",
+  "can_view_backtest_full",
+  "can_view_universe_pool_rules",
+  "can_view_data_versions",
+  "can_export_backtest",
+];
+
+const GRANT_ELIGIBLE_SET = new Set<string>(GRANT_ELIGIBLE_KEYS);
+
+const EMPTY_ENTITLEMENTS: Entitlements = ALL_ENTITLEMENTS.reduce((acc, k) => {
+  acc[k] = false;
+  return acc;
+}, {} as Entitlements);
+
+const GRANT_SCOPED: Partial<Entitlements> = Object.fromEntries(
+  GRANT_ELIGIBLE_KEYS.map((k) => [k, true]),
+) as Partial<Entitlements>;
 
 export function useEntitlements() {
   const plan = useAuthStore((s) => s.plan);
@@ -41,7 +56,7 @@ export function useEntitlements() {
     };
   }, [plan]);
 
-  const getStrategy = async (strategyId: string): Promise<StrategyEntitlements> => {
+  const getStrategy = useCallback(async (strategyId: string): Promise<StrategyEntitlements> => {
     const globalEnt = getEntitlementsForPlan(plan);
     const isSub = plan === "member" || plan === "admin";
     if (isSub) {
@@ -54,22 +69,11 @@ export function useEntitlements() {
     }
 
     if (plan !== "guest" && hasActiveGrant(strategyId)) {
-      const scoped: Partial<Entitlements> = {
-        can_download_strategy: true,
-        can_view_signals_realtime: true,
-        can_view_signal_price: true,
-        can_view_signal_strength: true,
-        can_view_backtest_full: true,
-        can_view_universe_pool_rules: true,
-        can_view_data_versions: true,
-        can_export_backtest: true,
-      };
-
       return {
         strategyId,
         hasAccess: true,
         accessSource: "grant",
-        entitlements: { ...getEmptyEntitlements(), ...globalEnt, ...scoped },
+        entitlements: { ...EMPTY_ENTITLEMENTS, ...globalEnt, ...GRANT_SCOPED },
       };
     }
 
@@ -79,29 +83,20 @@ export function useEntitlements() {
       accessSource: "none",
       entitlements: globalEnt,
     };
-  };
+  }, [plan, hasActiveGrant]);
 
-  const has = (key: EntitlementKey, strategyId?: string) => {
+  const has = useCallback((key: EntitlementKey, strategyId?: string) => {
     const globalEnt = global.entitlements[key];
     if (globalEnt) return true;
     if (!strategyId) return false;
     if (plan === "guest") return false;
     if (!hasActiveGrant(strategyId)) return false;
-    return [
-      "can_download_strategy",
-      "can_view_signals_realtime",
-      "can_view_signal_price",
-      "can_view_signal_strength",
-      "can_view_backtest_full",
-      "can_view_universe_pool_rules",
-      "can_view_data_versions",
-      "can_export_backtest",
-    ].includes(key);
-  };
+    return GRANT_ELIGIBLE_SET.has(key);
+  }, [global.entitlements, plan, hasActiveGrant]);
 
-  const refreshGlobal = async () => {
+  const refreshGlobal = useCallback(async () => {
     return;
-  };
+  }, []);
 
   return { global, refreshGlobal, getStrategy, has };
 }

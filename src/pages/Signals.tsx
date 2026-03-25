@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Download, Filter } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 
@@ -11,7 +11,7 @@ import Gated from "@/components/paywall/Gated";
 import BlurredValue from "@/components/paywall/BlurredValue";
 
 function signalDirection(s: SignalRead): "buy" | "sell" | "hold" {
-  const t = (s.signal_type || "").toLowerCase();
+  const t = (s.direction || "").toLowerCase();
   if (t === "long" || t === "buy") return "buy";
   if (t === "short" || t === "sell") return "sell";
   return "hold";
@@ -23,35 +23,51 @@ export default function Signals() {
   const strategyIdFromUrl = sp.get("strategyId") ?? "";
 
   const [strategies, setStrategies] = useState<StrategyRead[]>([]);
+  const [strategiesLoaded, setStrategiesLoaded] = useState(false);
   const [signals, setSignals] = useState<SignalRead[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [strategyId, setStrategyId] = useState<string>(strategyIdFromUrl);
   const [direction, setDirection] = useState<string>("");
+  const fetchIdRef = useRef(0);
 
   const canUnlimited = has("can_view_signals_unlimited");
 
   useEffect(() => {
-    listStrategies(1, 100).then((res) => setStrategies(res.items)).catch(() => {});
+    let alive = true;
+    listStrategies(1, 100)
+      .then((res) => { if (alive) { setStrategies(res.items); setStrategiesLoaded(true); } })
+      .catch(() => { if (alive) setStrategiesLoaded(true); });
+    return () => { alive = false; };
   }, []);
 
-  useEffect(() => {
+  const loadSignals = useCallback(() => {
+    const id = ++fetchIdRef.current;
     setLoading(true);
+    setError(null);
+
     if (strategyId) {
       listSignals(Number(strategyId), 100)
-        .then((res) => setSignals(res.signals))
-        .catch(() => setSignals([]))
-        .finally(() => setLoading(false));
-    } else {
-      // Load signals from all strategies
+        .then((res) => { if (id === fetchIdRef.current) setSignals(res.signals); })
+        .catch((e) => { if (id === fetchIdRef.current) { setSignals([]); setError(e instanceof Error ? e.message : "加载信号失败"); } })
+        .finally(() => { if (id === fetchIdRef.current) setLoading(false); });
+    } else if (strategies.length > 0) {
       Promise.all(strategies.slice(0, 10).map((s) => listSignals(s.id, 20).catch(() => ({ signals: [] as SignalRead[] }))))
         .then((results) => {
+          if (id !== fetchIdRef.current) return;
           const all = results.flatMap((r) => r.signals);
-          all.sort((a, b) => (a.bar_timestamp > b.bar_timestamp ? -1 : 1));
+          all.sort((a, b) => (a.signal_at > b.signal_at ? -1 : 1));
           setSignals(all);
         })
-        .finally(() => setLoading(false));
+        .catch(() => { if (id === fetchIdRef.current) setError("加载信号失败"); })
+        .finally(() => { if (id === fetchIdRef.current) setLoading(false); });
+    } else if (strategiesLoaded) {
+      setSignals([]);
+      setLoading(false);
     }
-  }, [strategyId, strategies]);
+  }, [strategyId, strategies, strategiesLoaded]);
+
+  useEffect(() => { loadSignals(); }, [loadSignals]);
 
   const strategyOptions = useMemo(() => strategies.map((s) => ({ id: String(s.id), label: s.name })), [strategies]);
   const strategiesById = useMemo(() => new Map(strategies.map((s) => [s.id, s])), [strategies]);
@@ -68,19 +84,19 @@ export default function Signals() {
     <div className="grid gap-6">
       <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
         <div>
-          <h1 className="text-lg font-semibold text-white md:text-xl">更多策略</h1>
-          <div className="mt-1 text-sm text-white/60">按策略/方向筛选，追踪最新交易信号。</div>
+          <h1 className="text-2xl font-bold text-white md:text-3xl tracking-tight">交易信号</h1>
+          <div className="mt-2 text-sm text-white/50">按策略和方向筛选，查看最新信号。</div>
         </div>
         <div className="flex items-center gap-2">
           <Gated
             require="can_export_signals"
             reason="export_signals"
             deniedMode="BLUR"
-            fallback={<BlurredValue text="导出CSV" width={112} />}
+            fallback={<BlurredValue text="导出 CSV" width={112} />}
           >
             <button
               type="button"
-              className="inline-flex items-center gap-2 rounded-lg bg-white/5 px-4 py-2 text-sm text-white/85 ring-1 ring-white/10 transition hover:bg-white/10"
+              className="inline-flex items-center gap-2 rounded-lg bg-white/5 px-4 py-2 text-sm text-white/85 border border-white/[0.06] transition hover:bg-white/10"
             >
               <Download className="size-4" />
               导出 CSV
@@ -89,7 +105,7 @@ export default function Signals() {
         </div>
       </div>
 
-      <div className="rounded-2xl bg-[color:var(--card)] p-4 ring-1 ring-white/10">
+      <div className="rounded-xl bg-[color:var(--card)] p-4 border border-white/[0.06]">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-2">
             <Filter className="size-4 text-white/70" />
@@ -127,15 +143,15 @@ export default function Signals() {
                 sp.delete("strategyId");
                 setSp(sp, { replace: true });
               }}
-              className="rounded-lg bg-white/5 px-3 py-2 text-sm text-white/80 ring-1 ring-white/10 transition hover:bg-white/10"
+              className="rounded-lg bg-white/5 px-3 py-2 text-sm text-white/80 border border-white/[0.06] transition hover:bg-white/10"
             >
-              重置
+              清除筛选
             </button>
           </div>
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-2xl bg-[color:var(--card)] ring-1 ring-white/10">
+      <div className="overflow-hidden rounded-xl bg-[color:var(--card)] border border-white/[0.06]">
         <div className="overflow-auto">
           {loading ? (
             <div className="p-6">
@@ -145,10 +161,25 @@ export default function Signals() {
                 ))}
               </div>
             </div>
+          ) : error ? (
+            <div className="flex flex-col items-center gap-3 p-8 text-center">
+              <div className="text-sm text-white/55">{error}</div>
+              <button
+                type="button"
+                onClick={loadSignals}
+                className="rounded-lg bg-white/5 px-4 py-2 text-sm text-white/80 border border-white/[0.06] transition hover:bg-white/10"
+              >
+                重试
+              </button>
+            </div>
+          ) : rows.length === 0 ? (
+            <div className="p-8 text-center text-sm text-white/55">
+              {direction || strategyId ? "当前筛选条件下没有信号。" : "暂无信号数据。"}
+            </div>
           ) : (
             <table className="w-full min-w-[780px] border-separate border-spacing-0">
               <thead>
-                <tr className="text-left text-xs text-white/55">
+                <tr className="text-left text-xs text-white/45">
                   <th className="sticky top-0 bg-[color:var(--card)] px-4 py-3">时间</th>
                   <th className="sticky top-0 bg-[color:var(--card)] px-4 py-3">策略</th>
                   <th className="sticky top-0 bg-[color:var(--card)] px-4 py-3">交易对</th>
@@ -163,8 +194,8 @@ export default function Signals() {
                   const st = strategiesById.get(s.strategy_id);
                   return (
                     <tr key={s.id} className="group text-sm text-white/85 hover:bg-white/5">
-                      <td className="border-t border-white/10 px-4 py-3 text-xs text-white/70 tabular-nums">{formatDateTime(s.bar_timestamp)}</td>
-                      <td className="border-t border-white/10 px-4 py-3">
+                      <td className="border-t border-white/[0.06] px-4 py-3 text-xs text-white/70 tabular-nums">{formatDateTime(s.signal_at)}</td>
+                      <td className="border-t border-white/[0.06] px-4 py-3">
                         <Link
                           to={`/strategies/${s.strategy_id}?tab=chart`}
                           className="font-medium text-white hover:underline"
@@ -172,12 +203,12 @@ export default function Signals() {
                           {st?.name || `策略 #${s.strategy_id}`}
                         </Link>
                       </td>
-                      <td className="border-t border-white/10 px-4 py-3 text-xs text-white/70">{s.pair}</td>
-                      <td className="border-t border-white/10 px-4 py-3 text-xs text-white/70">{s.timeframe}</td>
-                      <td className="border-t border-white/10 px-4 py-3">
+                      <td className="border-t border-white/[0.06] px-4 py-3 text-xs text-white/70">{s.pair}</td>
+                      <td className="border-t border-white/[0.06] px-4 py-3 text-xs text-white/70">{s.timeframe}</td>
+                      <td className="border-t border-white/[0.06] px-4 py-3">
                         <span
                           className={cn(
-                            "rounded-full px-2 py-1 text-xs ring-1 ring-white/10",
+                            "rounded-full px-2 py-1 text-xs border border-white/[0.06]",
                             dir === "buy"
                               ? "bg-[color:var(--success)]/15 text-[color:var(--success)]"
                               : dir === "sell"
@@ -185,10 +216,10 @@ export default function Signals() {
                                 : "bg-white/5 text-white/70",
                           )}
                         >
-                          {s.signal_type.toUpperCase()}
+                          {s.direction.toUpperCase()}
                         </span>
                       </td>
-                      <td className="border-t border-white/10 px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                      <td className="border-t border-white/[0.06] px-4 py-3" onClick={(e) => e.stopPropagation()}>
                         <Gated
                           require="can_view_signal_strength"
                           reason="signal_strength"
@@ -207,15 +238,15 @@ export default function Signals() {
           )}
         </div>
 
-        <div className="flex flex-col gap-3 border-t border-white/10 px-4 py-3 md:flex-row md:items-center md:justify-between">
-          <div className="text-xs text-white/55">
+        <div className="flex flex-col gap-3 border-t border-white/[0.06] px-4 py-3 md:flex-row md:items-center md:justify-between">
+          <div className="text-xs text-white/45">
             {!canUnlimited ? (
-              <span>免费额度：最多查看 50 条。升级会员可无限查看。</span>
+              <span>免费用户最多查看 50 条，<Link to="/pricing" className="text-[color:var(--accent)] hover:underline">升级</Link>可无限查看。</span>
             ) : (
               <span>会员：无限查看。</span>
             )}
           </div>
-          <div className="text-xs text-white/55">共 {rows.length} 条信号</div>
+          <div className="text-xs text-white/45">共 {rows.length} 条信号</div>
         </div>
       </div>
     </div>
@@ -224,8 +255,9 @@ export default function Signals() {
 
 function Select(props: { value: string; onChange: (v: string) => void; items: Array<{ id: string; label: string }> }) {
   return (
-    <label className="inline-flex items-center rounded-lg bg-white/5 px-3 py-2 text-sm text-white/85 ring-1 ring-white/10">
+    <label className="inline-flex items-center gap-1 rounded-lg bg-white/5 px-3 py-2 text-sm text-white/85 border border-white/[0.06]">
       <select
+        aria-label="筛选条件"
         value={props.value}
         onChange={(e) => props.onChange(e.target.value)}
         className={cn("bg-transparent text-sm text-white outline-none", "[color-scheme:dark]")}
