@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
+import { Link, NavLink, useNavigate } from "react-router-dom";
 import { Crown, LogIn, LogOut, Menu, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -40,7 +40,6 @@ function planTone(plan: Plan) {
 }
 
 export default function TopNav() {
-  const location = useLocation();
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const plan = useAuthStore((s) => s.plan);
@@ -65,7 +64,10 @@ export default function TopNav() {
         <div className="container flex h-14 items-center gap-4">
           <Link to="/" className="flex items-center gap-2.5">
             <div className="grid size-8 place-items-center rounded-lg bg-[color:var(--accent-soft)] border border-[color:var(--accent)]/20">
-              <span className="text-sm font-semibold text-[color:var(--accent)]">CT</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-[color:var(--accent)]">
+                <path d="M3 18L8 10L13 14L18 6L21 12" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                <circle cx="21" cy="12" r="1.5" fill="currentColor"/>
+              </svg>
             </div>
             <div className="hidden leading-tight sm:block">
               <div className="text-sm font-semibold text-white tracking-tight">经典交易策略</div>
