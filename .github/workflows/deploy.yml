@@ -35,5 +35,8 @@ jobs:
             git pull origin main
             npm ci
             npm run build
-            echo "Build complete."
-            ls -la dist/
+            # Sync dist to OpenResty serving directory
+            rm -rf /opt/1panel/apps/openresty/openresty/www/sites/8.209.238.108/dist
+            cp -r dist /opt/1panel/apps/openresty/openresty/www/sites/8.209.238.108/dist
+            echo "Deploy complete."
+            ls -la /opt/1panel/apps/openresty/openresty/www/sites/8.209.238.108/dist/
