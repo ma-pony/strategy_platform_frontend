@@ -19,15 +19,10 @@ export default function Account() {
   const logout = useAuthStore((s) => s.logout);
   const grants = useAuthStore((s) => s.grants);
 
+  const [section, setSection] = useState<SectionKey>("subscription");
+
   const canView = ent.has("can_view_account");
   const returnTo = useMemo(() => encodeURIComponent(location.pathname + location.search), [location.pathname, location.search]);
-
-  useEffect(() => {
-    if (canView) return;
-    navigate(`/login?returnTo=${returnTo}`, { replace: true });
-  }, [canView, navigate, returnTo]);
-
-  if (!canView) return null;
 
   const displayName = user?.email ?? "用户";
   const accountId = user?.id ? String(user.id) : "—";
@@ -35,8 +30,6 @@ export default function Account() {
   const planTone = plan === "member" ? "text-[color:var(--accent)]" : plan === "admin" ? "text-[color:var(--admin)]" : "text-white";
   const subStatusLabel = subscription.status === "active" ? "已生效" : subscription.status === "trialing" ? "试用中" : subscription.status === "past_due" ? "逾期" : subscription.status === "canceled" ? "已取消" : "未订阅";
   const periodEndLabel = subscription.currentPeriodEnd ? formatDateTime(subscription.currentPeriodEnd) : "—";
-
-  const [section, setSection] = useState<SectionKey>("subscription");
 
   const entitlements = ent.global.entitlements;
   const entRows = useMemo(
@@ -65,6 +58,13 @@ export default function Account() {
     ];
     return items.filter((x) => !x.hidden);
   }, [grants.length]);
+
+  useEffect(() => {
+    if (canView) return;
+    navigate(`/login?returnTo=${returnTo}`, { replace: true });
+  }, [canView, navigate, returnTo]);
+
+  if (!canView) return null;
 
   return (
     <div className="grid gap-6">

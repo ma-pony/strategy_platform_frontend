@@ -1,12 +1,11 @@
 import { useMemo, useRef, useState } from "react";
-import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Mail, ShieldCheck, Lock, AlertCircle } from "lucide-react";
 
 import { useAuthStore } from "@/stores/authStore";
 
 export default function Login() {
   const [sp] = useSearchParams();
-  const location = useLocation();
   const navigate = useNavigate();
   const loginAsync = useAuthStore((s) => s.loginAsync);
   const isLoading = useAuthStore((s) => s.isLoading);

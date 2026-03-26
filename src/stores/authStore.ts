@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
 import type { Plan } from "@/lib/entitlements";
-import { setTokens, clearTokens, getTokens } from "@/api/client";
+
 import { login as apiLogin, register as apiRegister, logout as apiLogout } from "@/api/auth";
 import type { UserRead } from "@/api/types";
 

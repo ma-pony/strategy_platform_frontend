@@ -4,7 +4,7 @@ import type { StrategyRead } from "@/api/types";
 import { cn } from "@/lib/utils";
 import { formatInt, formatNumber, formatPct } from "@/lib/format";
 import { usePaywall } from "@/hooks/usePaywall";
-import { useEntitlements } from "@/hooks/useEntitlements";
+
 
 export type RankingRow = {
   strategy: StrategyRead;
@@ -12,7 +12,6 @@ export type RankingRow = {
 
 export default function StrategyRankingTable(props: { rows: RankingRow[]; className?: string }) {
   const { open } = usePaywall();
-  const { has } = useEntitlements();
   const navigate = useNavigate();
 
   return (
