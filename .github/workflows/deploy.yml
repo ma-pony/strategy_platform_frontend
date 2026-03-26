@@ -24,11 +24,16 @@ jobs:
           port: ${{ secrets.DEPLOY_PORT || 22 }}
           command_timeout: 10m
           script: |
+            # Load node (nvm / fnm / system)
             export NVM_DIR="$HOME/.nvm"
             [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+            [ -s "$HOME/.fnm/fnm" ] && eval "$($HOME/.fnm/fnm env)"
+            export PATH="$HOME/.local/bin:/usr/local/bin:$PATH"
+            source ~/.bashrc 2>/dev/null || true
+            node -v && npm -v
             cd /opt/strategy-platform-frontend
             git pull origin main
             npm ci
             npm run build
-            echo "Build complete. dist/ ready for OpenResty."
+            echo "Build complete."
             ls -la dist/
