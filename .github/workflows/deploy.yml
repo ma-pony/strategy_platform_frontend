@@ -31,4 +31,4 @@ jobs:
             docker compose -f docker-compose.prod.yml ps
             docker image prune -f
             # Health check
-            curl -f http://localhost:3000/ || echo "Health check failed"
+            curl -f http://localhost/ || echo "Health check failed"
