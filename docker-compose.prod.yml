@@ -1,8 +1,0 @@
-services:
-  web:
-    container_name: strategy_platform_frontend
-    build: .
-    network_mode: host
-    restart: unless-stopped
-    environment:
-      - NGINX_PORT=80

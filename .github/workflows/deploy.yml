@@ -22,13 +22,13 @@ jobs:
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.DEPLOY_PORT || 22 }}
+          command_timeout: 10m
           script: |
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
             cd /opt/strategy-platform-frontend
             git pull origin main
-            docker compose -f docker-compose.prod.yml build
-            docker compose -f docker-compose.prod.yml up -d
-            sleep 5
-            docker compose -f docker-compose.prod.yml ps
-            docker image prune -f
-            # Health check
-            curl -f http://localhost:3000/ || echo "Health check failed"
+            npm ci
+            npm run build
+            echo "Build complete. dist/ ready for OpenResty."
+            ls -la dist/
