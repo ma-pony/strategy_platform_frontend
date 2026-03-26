@@ -35,8 +35,9 @@ jobs:
             git pull origin main
             npm ci
             npm run build
-            # Sync dist to OpenResty serving directory
-            rm -rf /opt/1panel/apps/openresty/openresty/www/sites/8.209.238.108/dist
-            cp -r dist /opt/1panel/apps/openresty/openresty/www/sites/8.209.238.108/dist
+            # Sync dist to OpenResty serving directory (1panel Docker mount)
+            DIST_TARGET="/opt/1panel/apps/openresty/openresty/www/sites/8.209.238.108/dist"
+            rm -rf "$DIST_TARGET"
+            cp -r dist "$DIST_TARGET"
             echo "Deploy complete."
-            ls -la /opt/1panel/apps/openresty/openresty/www/sites/8.209.238.108/dist/
+            ls -la "$DIST_TARGET/"

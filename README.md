@@ -80,6 +80,42 @@ src/
 |------|------|--------|
 | `VITE_API_BASE_URL` | 后端 API 地址 | `http://localhost:8000/api/v1` |
 
+## CI/CD 与部署
+
+### CI（GitHub Actions）
+
+push 或 PR 到 `main` 时自动运行：
+
+1. **Lint** → ESLint
+2. **Type Check** → `tsc --noEmit`
+3. **Test** → Vitest
+4. **Build** → `vite build`
+
+### 部署
+
+push 到 `main` 后，CI 通过即自动部署到阿里云服务器：
+
+1. SSH 到服务器，`git pull` + `npm ci` + `npm run build`
+2. 将 `dist/` 拷贝到 OpenResty 静态文件目录
+3. OpenResty（1panel Docker 容器）直接托管静态文件
+
+**服务器架构：**
+
+```
+OpenResty (Docker, 1panel)
+├── / → /www/sites/8.209.238.108/dist/   (前端静态文件)
+└── /api/ → 10.255.0.1:8000              (反代到后端)
+```
+
+**所需 GitHub Secrets：**
+
+| Secret | 说明 |
+|--------|------|
+| `DEPLOY_HOST` | 服务器 IP |
+| `DEPLOY_USER` | SSH 用户名 |
+| `SSH_PRIVATE_KEY` | SSH 私钥 |
+| `DEPLOY_PORT` | SSH 端口（可选，默认 22） |
+
 ## 会员与升级
 
 当前阶段采用联系销售模式，所有升级操作通过后端管理。前端不包含自助升级/支付流程。
