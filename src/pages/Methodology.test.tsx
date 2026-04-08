@@ -14,6 +14,8 @@ vi.mock("@/api/strategies", () => ({
         description: "海龟交易策略",
         pairs: ["BTC/USDT"],
         strategy_type: "trend_following",
+        total_return: null,
+        annual_return: null,
         trade_count: null,
         max_drawdown: null,
         sharpe_ratio: null,
