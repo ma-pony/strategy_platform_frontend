@@ -13,6 +13,8 @@ export type StrategyRead = {
   description: string | null;
   pairs: string[];
   strategy_type: string | null;
+  total_return: number | null;
+  annual_return: number | null;
   trade_count: number | null;
   max_drawdown: number | null;
   sharpe_ratio: number | null;

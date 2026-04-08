@@ -41,18 +41,66 @@ export default function ChartPanel(props: { strategyId: string; signals: SignalR
   }, [props.signals, range]);
 
   const h = 520;
+  const innerW = SVG_W - SVG_PADDING.l - SVG_PADDING.r;
+  const yLong = h / 2 - 80;
+  const yFlat = h / 2;
+  const yShort = h / 2 + 80;
 
-  const markers = useMemo(() => {
-    if (filtered.length === 0) return [];
-    const xMax = Math.max(1, filtered.length - 1);
-    return filtered.map((s, idx) => {
-      const cx = SVG_PADDING.l + (idx / xMax) * (SVG_W - SVG_PADDING.l - SVG_PADDING.r);
+  const { markers, linePoints, xTicks } = useMemo(() => {
+    if (filtered.length === 0) {
+      return { markers: [] as Array<{ cx: number; cy: number; fill: string; signal: SignalRead; dir: "buy" | "sell" | "hold" }>, linePoints: "", xTicks: [] as Array<{ x: number; label: string }> };
+    }
+    const times = filtered.map((s) => new Date(s.signal_at).getTime());
+    const tMin = times[0];
+    const tMax = times[times.length - 1];
+    const tSpan = Math.max(1, tMax - tMin);
+    const xOf = (t: number) => SVG_PADDING.l + ((t - tMin) / tSpan) * innerW;
+
+    const yByDir = (d: "buy" | "sell" | "hold") => (d === "buy" ? yLong : d === "sell" ? yShort : yFlat);
+
+    const ms = filtered.map((s, i) => {
       const dir = signalDirection(s);
-      const cy = h / 2 + (dir === "buy" ? -80 : dir === "sell" ? 80 : 0);
-      const fill = dir === "buy" ? "var(--success)" : dir === "sell" ? "var(--danger)" : HOLD_FILL;
-      return { cx, cy, fill, signal: s, dir };
+      return {
+        cx: xOf(times[i]),
+        cy: yByDir(dir),
+        fill: dir === "buy" ? "var(--success)" : dir === "sell" ? "var(--danger)" : HOLD_FILL,
+        signal: s,
+        dir,
+      };
     });
-  }, [filtered, h]);
+
+    // Step line: position state holds until next signal flips it.
+    const pts: Array<[number, number]> = [];
+    let prevY = yFlat;
+    ms.forEach((m, i) => {
+      if (i === 0) {
+        pts.push([m.cx, m.cy]);
+      } else {
+        // step: horizontal at prevY until current x, then vertical to current y
+        pts.push([m.cx, prevY]);
+        pts.push([m.cx, m.cy]);
+      }
+      prevY = m.cy;
+    });
+    // Extend the last state to the right edge so the line spans the full chart.
+    const rightEdge = SVG_PADDING.l + innerW;
+    if (pts.length > 0 && pts[pts.length - 1][0] < rightEdge) {
+      pts.push([rightEdge, prevY]);
+    }
+    const polyStr = pts.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
+
+    // X-axis ticks: 5 evenly spaced
+    const tickCount = 5;
+    const ticks: Array<{ x: number; label: string }> = [];
+    for (let i = 0; i < tickCount; i++) {
+      const t = tMin + (tSpan * i) / (tickCount - 1);
+      const d = new Date(t);
+      const label = `${d.getMonth() + 1}/${d.getDate()}`;
+      ticks.push({ x: xOf(t), label });
+    }
+
+    return { markers: ms, linePoints: polyStr, xTicks: ticks };
+  }, [filtered, innerW, yLong, yFlat, yShort]);
 
   return (
     <div className={cn("rounded-xl bg-[color:var(--card)] p-5 border border-white/[0.06]", props.className)}>
@@ -82,9 +130,35 @@ export default function ChartPanel(props: { strategyId: string; signals: SignalR
             role="img"
             aria-label={`信号分布图，共 ${markers.length} 个信号`}
           >
-            <line x1={SVG_PADDING.l} x2={SVG_W - SVG_PADDING.r} y1={h / 2} y2={h / 2} stroke="rgba(255,255,255,0.06)" />
-            <text x={SVG_PADDING.l - 4} y={h / 2 - 80} fontSize="11" fill="var(--success)" opacity="0.6" textAnchor="end">BUY</text>
-            <text x={SVG_PADDING.l - 4} y={h / 2 + 84} fontSize="11" fill="var(--danger)" opacity="0.6" textAnchor="end">SELL</text>
+            {/* guide lines for LONG / FLAT / SHORT */}
+            <line x1={SVG_PADDING.l} x2={SVG_W - SVG_PADDING.r} y1={yLong} y2={yLong} stroke="rgba(46,204,113,0.18)" strokeDasharray="3 4" />
+            <line x1={SVG_PADDING.l} x2={SVG_W - SVG_PADDING.r} y1={yFlat} y2={yFlat} stroke="rgba(255,255,255,0.08)" />
+            <line x1={SVG_PADDING.l} x2={SVG_W - SVG_PADDING.r} y1={yShort} y2={yShort} stroke="rgba(231,76,60,0.18)" strokeDasharray="3 4" />
+            <text x={SVG_PADDING.l - 4} y={yLong + 4} fontSize="11" fill="var(--success)" opacity="0.6" textAnchor="end">LONG</text>
+            <text x={SVG_PADDING.l - 4} y={yFlat + 4} fontSize="11" fill="rgba(255,255,255,0.5)" textAnchor="end">FLAT</text>
+            <text x={SVG_PADDING.l - 4} y={yShort + 4} fontSize="11" fill="var(--danger)" opacity="0.6" textAnchor="end">SHORT</text>
+
+            {/* x-axis baseline + ticks */}
+            <line x1={SVG_PADDING.l} x2={SVG_W - SVG_PADDING.r} y1={h - SVG_PADDING.b} y2={h - SVG_PADDING.b} stroke="rgba(255,255,255,0.08)" />
+            {xTicks.map((t, i) => (
+              <g key={i}>
+                <line x1={t.x} x2={t.x} y1={h - SVG_PADDING.b} y2={h - SVG_PADDING.b + 4} stroke="rgba(255,255,255,0.25)" />
+                <text x={t.x} y={h - SVG_PADDING.b + 16} fontSize="11" fill="rgba(255,255,255,0.5)" textAnchor="middle">{t.label}</text>
+              </g>
+            ))}
+
+            {/* position state step line */}
+            {linePoints ? (
+              <polyline
+                points={linePoints}
+                fill="none"
+                stroke="var(--accent)"
+                strokeWidth={2}
+                strokeLinejoin="round"
+                strokeLinecap="round"
+                opacity={0.85}
+              />
+            ) : null}
 
             {markers.map((m) => (
               <circle

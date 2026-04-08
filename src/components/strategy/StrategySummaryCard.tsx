@@ -12,8 +12,9 @@ export default function StrategySummaryCard(props: {
   const s = props.strategy;
   const bt = props.backtest;
 
-  const heroValue = bt?.total_return != null ? formatPct(bt.total_return * 100) : null;
-  const heroTone = bt && bt.total_return != null ? (bt.total_return >= 0 ? "up" : "down") : undefined;
+  const heroReturn = bt?.total_return ?? s.total_return ?? null;
+  const heroValue = heroReturn != null ? formatPct(heroReturn * 100) : null;
+  const heroTone = heroReturn != null ? (heroReturn >= 0 ? "up" : "down") : undefined;
 
   return (
     <div className={cn("rounded-xl bg-[color:var(--card)] border border-white/[0.06]", props.className)}>
@@ -55,11 +56,22 @@ export default function StrategySummaryCard(props: {
       </div>
 
       {/* Bottom metrics bar — flush, separated */}
-      <div className="grid grid-cols-3 border-t border-white/[0.04]">
+      <div className="grid grid-cols-2 border-t border-white/[0.04] md:grid-cols-4">
+        {(() => {
+          const cagr = bt?.annual_return ?? s.annual_return ?? null;
+          return (
+            <MetricCell
+              label="年化收益 (CAGR)"
+              value={cagr != null ? formatPct(cagr * 100) : "—"}
+              tone={cagr == null ? undefined : cagr >= 0 ? "up" : "down"}
+            />
+          );
+        })()}
         <MetricCell
           label="最大回撤"
           value={bt?.max_drawdown != null ? formatPct(-Math.abs(bt.max_drawdown * 100)) : (s.max_drawdown != null ? formatPct(-Math.abs(s.max_drawdown * 100)) : "—")}
           tone="down"
+          border
         />
         <MetricCell
           label="Sharpe"

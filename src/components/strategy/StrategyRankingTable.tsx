@@ -28,13 +28,15 @@ export default function StrategyRankingTable(props: { rows: RankingRow[]; classN
       </div>
 
       <div className="overflow-auto">
-        <table className="w-full min-w-[820px] border-separate border-spacing-0">
+        <table className="w-full min-w-[1020px] border-separate border-spacing-0">
           <thead>
             <tr className="text-left text-xs text-white/55">
               <th className="sticky top-0 bg-[color:var(--card)] px-4 py-3">排名</th>
               <th className="sticky top-0 bg-[color:var(--card)] px-4 py-3">策略</th>
               <th className="sticky top-0 bg-[color:var(--card)] px-4 py-3">类型</th>
               <th className="sticky top-0 bg-[color:var(--card)] px-4 py-3">交易对</th>
+              <th className="sticky top-0 bg-[color:var(--card)] px-4 py-3">收益率</th>
+              <th className="sticky top-0 bg-[color:var(--card)] px-4 py-3">年化(CAGR)</th>
               <th className="sticky top-0 bg-[color:var(--card)] px-4 py-3">交易数</th>
               <th className="sticky top-0 bg-[color:var(--card)] px-4 py-3">回撤</th>
               <th className="sticky top-0 bg-[color:var(--card)] px-4 py-3">Sharpe</th>
@@ -79,6 +81,30 @@ export default function StrategyRankingTable(props: { rows: RankingRow[]; classN
                       ))}
                       {st.pairs.length > 3 ? <span className="text-white/45">+{st.pairs.length - 3}</span> : null}
                     </div>
+                  </td>
+                  <td
+                    className={cn(
+                      "border-t border-white/[0.06] px-4 py-3 text-sm tabular-nums",
+                      st.total_return == null
+                        ? "text-white/85"
+                        : st.total_return >= 0
+                          ? "text-[color:var(--success)]"
+                          : "text-[color:var(--danger)]",
+                    )}
+                  >
+                    {st.total_return != null ? formatPct(st.total_return * 100) : "—"}
+                  </td>
+                  <td
+                    className={cn(
+                      "border-t border-white/[0.06] px-4 py-3 text-sm tabular-nums",
+                      st.annual_return == null
+                        ? "text-white/85"
+                        : st.annual_return >= 0
+                          ? "text-[color:var(--success)]"
+                          : "text-[color:var(--danger)]",
+                    )}
+                  >
+                    {st.annual_return != null ? formatPct(st.annual_return * 100) : "—"}
                   </td>
                   <td className="border-t border-white/[0.06] px-4 py-3 text-sm text-white/85 tabular-nums">
                     {st.trade_count != null ? formatInt(st.trade_count) : "—"}
