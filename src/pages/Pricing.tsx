@@ -136,7 +136,7 @@ export default function Pricing() {
           </table>
         </div>
         <div className="mt-4 text-xs text-white/50">
-          指标定义与风险提示请查看 <Link to="/methodology" className="text-[color:var(--accent)] hover:underline">策略说明页</Link>。
+          指标定义与风险提示请查看 <Link to="/strategies#methodology" className="text-[color:var(--accent)] hover:underline">策略来源页</Link>。
         </div>
       </div>
     </div>

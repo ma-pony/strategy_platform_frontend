@@ -27,7 +27,8 @@ export type PaywallReason =
   | "export_backtest"
   | "signals_quota"
   | "advanced_filters"
-  | "backtest_full";
+  | "backtest_full"
+  | "trial_expired";
 
 export type GateDecision = {
   mode: GatingMode;

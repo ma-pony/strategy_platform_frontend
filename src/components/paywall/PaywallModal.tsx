@@ -55,6 +55,11 @@ const PAYWALL_COPY: Record<
     bullets: ["查看代币池规则与回测数据版本", "查看年化收益、胜率等扩展指标"],
     primaryCta: "upgrade",
   },
+  trial_expired: {
+    title: "免费体验已结束",
+    bullets: ["注册后继续免费浏览基础功能", "升级会员解锁完整信号与回测报告"],
+    primaryCta: "login",
+  },
 };
 
 function canDismiss(target: HTMLElement) {
@@ -82,7 +87,8 @@ export default function PaywallModal() {
 
   if (!isOpen || !params || !copy) return null;
 
-  const returnTo = params.returnTo || "/";
+  const rawReturnTo = params.returnTo || "/";
+  const returnTo = rawReturnTo.startsWith("/") && !rawReturnTo.startsWith("//") ? rawReturnTo : "/";
   const loginUrl = `/login?returnTo=${encodeURIComponent(returnTo)}`;
   const isAuthed = Boolean(user);
   const showLogin = !isAuthed;
@@ -186,8 +192,8 @@ export default function PaywallModal() {
 
               <div className="mt-4 grid gap-2 text-xs text-white/45">
                 <div>
-                  <Link to="/methodology" onClick={close} className="text-[color:var(--accent)] hover:underline">
-                    策略说明与指标定义
+                  <Link to="/strategies#methodology" onClick={close} className="text-[color:var(--accent)] hover:underline">
+                    指标定义与风险提示
                   </Link>
                   <span className="mx-2 text-white/50">·</span>
                   <Link to="/account" onClick={close} className="text-[color:var(--accent)] hover:underline">

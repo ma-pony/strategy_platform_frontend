@@ -1,6 +1,5 @@
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api/v1";
+import { getVisitorId } from "@/lib/visitorId";
 
-/** Backend business error codes */
 export const API_CODE = {
   SUCCESS: 0,
   AUTH_FAILED: 1001,
@@ -15,7 +14,16 @@ export const API_CODE = {
   EMAIL_TAKEN: 3010,
   SERVER_ERROR: 5000,
   ENGINE_ERROR: 5001,
+  TRIAL_EXPIRED: 4031,
 } as const;
+
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api/v1";
+
+type TrialExpiredHandler = () => void;
+let onTrialExpired: TrialExpiredHandler | null = null;
+export function setTrialExpiredHandler(fn: TrialExpiredHandler) {
+  onTrialExpired = fn;
+}
 
 type ApiResponse<T> = {
   code: number;
@@ -124,6 +132,14 @@ export async function request<T>(path: string, opts: RequestOptions = {}): Promi
     "Content-Type": "application/json",
   };
 
+  const visitorId = await Promise.race([
+    getVisitorId(),
+    new Promise<string>((_, reject) => setTimeout(() => reject(new Error("timeout")), 2000)),
+  ]).catch(() => "unknown");
+  if (/^[a-zA-Z0-9_-]{8,64}$/.test(visitorId)) {
+    headers["X-Visitor-ID"] = visitorId;
+  }
+
   if (auth) {
     const { accessToken } = getTokens();
     if (accessToken) {
@@ -175,6 +191,9 @@ export async function request<T>(path: string, opts: RequestOptions = {}): Promi
   }
 
   if (!res.ok || json.code !== 0) {
+    if (json.code === API_CODE.TRIAL_EXPIRED) {
+      onTrialExpired?.();
+    }
     throw new ApiError(json.message || "请求失败", json.code, res.status);
   }
 

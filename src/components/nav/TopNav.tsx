@@ -12,11 +12,10 @@ const navItems: Array<{
   label: { zh: string; en: string };
   requiresAuth?: boolean;
 }> = [
-  { to: "/", label: { zh: "首页", en: "Home" } },
-  { to: "/signals", label: { zh: "交易信号", en: "Signals" } },
-  { to: "/methodology", label: { zh: "策略说明", en: "Methodology" } },
-  { to: "/market-research", label: { zh: "AI 市场研究", en: "Market Research" } },
-  { to: "/pricing", label: { zh: "升级会员", en: "Upgrade" }, requiresAuth: true },
+  { to: "/", label: { zh: "信号总览", en: "Signals" } },
+  { to: "/strategies", label: { zh: "策略来源", en: "Strategies" } },
+  { to: "/market-research", label: { zh: "市场研究", en: "Research" } },
+  { to: "/pricing", label: { zh: "会员", en: "Membership" }, requiresAuth: true },
 ];
 
 function planLabel(plan: Plan, locale: "zh" | "en") {

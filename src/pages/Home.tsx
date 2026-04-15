@@ -1,99 +1,170 @@
-import { useMemo } from "react";
-import { ArrowRight } from "lucide-react";
-import { Link } from "react-router-dom";
+import { useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 
-import { listStrategies } from "@/api/strategies";
+import { listStrategies, listLatestSignalsPerPair } from "@/api/strategies";
 import { useApi } from "@/hooks/useApi";
-import StrategyRankingTable, { type RankingRow } from "@/components/strategy/StrategyRankingTable";
+import { useEntitlements } from "@/hooks/useEntitlements";
+import {
+  groupSignalsByPair,
+  extractTimeframes,
+  extractPairs,
+} from "@/lib/signalGrouping";
+import PairFilterBar from "@/components/signals/PairFilterBar";
+import TimeframeTabs from "@/components/signals/TimeframeTabs";
+import PairGroupComponent from "@/components/signals/PairGroup";
+
+/** Free users see at most this many pair groups */
+const FREE_PAIR_LIMIT = 3;
+/** Free users see at most this many signals per expanded card */
+const FREE_HISTORY_LIMIT = 2;
 
 export default function Home() {
-  const { data, loading, error, refetch } = useApi(() => listStrategies(1, 100), []);
+  const [sp, setSp] = useSearchParams();
+  const { has } = useEntitlements();
+  const canUnlimited = has("can_view_signals_unlimited");
 
-  const rows = useMemo<RankingRow[]>(() => {
-    if (!data) return [];
-    return data.items.map((st) => ({
-      strategy: st,
-    }));
-  }, [data]);
+  const [pairFilter, setPairFilter] = useState<string | null>(sp.get("pair") || null);
+  const [timeframeFilter, setTimeframeFilter] = useState<string | null>(sp.get("timeframe") || null);
+
+  const { data: strategiesData, loading: loadingStrategies } = useApi(
+    () => listStrategies(1, 100),
+    [],
+  );
+
+  const { data: signalsData, loading: loadingSignals, error, refetch } = useApi(
+    () => listLatestSignalsPerPair(timeframeFilter ?? undefined),
+    [timeframeFilter],
+  );
+
+  const strategies = useMemo(() => strategiesData?.items ?? [], [strategiesData]);
+  const signals = useMemo(() => signalsData ?? [], [signalsData]);
+
+  const timeframes = useMemo(() => extractTimeframes(signals), [signals]);
+  const allPairs = useMemo(() => extractPairs(signals), [signals]);
+
+  const groups = useMemo(() => {
+    let grouped = groupSignalsByPair(signals, strategies, timeframeFilter ?? undefined);
+    if (pairFilter) grouped = grouped.filter((g) => g.pair === pairFilter);
+    if (!canUnlimited) grouped = grouped.slice(0, FREE_PAIR_LIMIT);
+    return grouped;
+  }, [signals, strategies, timeframeFilter, pairFilter, canUnlimited]);
+
+  const pairBlocked = !canUnlimited && pairFilter !== null && groups.length === 0 && signals.length > 0;
+
+  const totalGroupCount = useMemo(() => {
+    const grouped = groupSignalsByPair(signals, strategies, timeframeFilter ?? undefined);
+    return grouped.length;
+  }, [signals, strategies, timeframeFilter]);
+
+  const historyLimit = canUnlimited ? 20 : FREE_HISTORY_LIMIT;
+
+  const loading = loadingStrategies || loadingSignals;
+
+  const updateFilter = (key: string, value: string | null) => {
+    if (value) {
+      sp.set(key, value);
+    } else {
+      sp.delete(key);
+    }
+    setSp(sp, { replace: true });
+  };
 
   return (
-    <div className="grid gap-10">
-      {/* Hero section — no container, just typography */}
-      <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-white md:text-3xl tracking-tight">热门策略榜</h1>
-          <div className="mt-2 text-sm text-white/50 max-w-lg">浏览经典交易策略的收益、回撤与风险指标，点击进入详情。</div>
+    <div className="grid gap-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-bold text-white md:text-3xl tracking-tight">信号总览</h1>
+        <div className="mt-2 text-sm text-white/50 max-w-lg">
+          按币种查看各策略的最新交易信号，对比不同策略的观点，辅助决策参考。
         </div>
-        <Link
-          to="/methodology"
-          className="inline-flex items-center gap-2 text-sm text-[color:var(--accent)] hover:underline shrink-0"
-        >
-          指标定义与回测假设
-          <ArrowRight className="size-3.5" />
-        </Link>
       </div>
 
-      {/* Main content — asymmetric layout */}
-      <div className="grid gap-8 lg:grid-cols-[1fr_300px]">
-        <div>
-          {loading ? (
-            <div className="rounded-xl bg-[color:var(--card)] p-6">
-              <div className="h-4 w-3/4 animate-pulse rounded bg-white/[0.06]" />
-              <div className="mt-4 space-y-3">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <div key={i} className="h-12 animate-pulse rounded bg-white/[0.04]" />
+      {/* Filters */}
+      <div className="grid gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <TimeframeTabs
+            timeframes={timeframes}
+            active={timeframeFilter}
+            onChange={(tf) => {
+              setTimeframeFilter(tf);
+              updateFilter("timeframe", tf);
+            }}
+          />
+        </div>
+        {allPairs.length > 1 ? (
+          <PairFilterBar
+            pairs={allPairs}
+            active={pairFilter}
+            onChange={(p) => {
+              setPairFilter(p);
+              updateFilter("pair", p);
+            }}
+          />
+        ) : null}
+      </div>
+
+      {/* Content */}
+      {loading ? (
+        <div className="grid gap-4">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="rounded-xl border border-white/[0.06] bg-[color:var(--card)] p-6">
+              <div className="h-5 w-1/4 animate-pulse rounded bg-white/[0.06]" />
+              <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {Array.from({ length: 3 }).map((_, j) => (
+                  <div key={j} className="h-20 animate-pulse rounded-xl bg-white/[0.04]" />
                 ))}
               </div>
             </div>
-          ) : error ? (
-            <div className="rounded-xl bg-[color:var(--card)] p-6 border border-white/[0.06]">
-              <div className="text-sm text-white/70">{error}</div>
-              <button
-                type="button"
-                onClick={refetch}
-                className="mt-3 rounded-lg bg-white/5 px-4 py-2 text-sm text-white/80 border border-white/[0.06] transition hover:bg-white/10"
-              >
-                重试
-              </button>
-            </div>
-          ) : (
-            <StrategyRankingTable rows={rows} />
-          )}
+          ))}
         </div>
-
-        {/* Sidebar — mixed container styles */}
-        <aside className="grid gap-6 content-start">
-          <Link
-            to="/market-research"
-            className="group block rounded-xl border border-white/[0.06] bg-[color:var(--card)] p-5 transition-colors hover:border-[color:var(--accent)]/20"
+      ) : error ? (
+        <div className="rounded-xl bg-[color:var(--card)] p-6 border border-white/[0.06]">
+          <div className="text-sm text-white/70">{error}</div>
+          <button
+            type="button"
+            onClick={refetch}
+            className="mt-3 rounded-lg bg-white/5 px-4 py-2 text-sm text-white/80 border border-white/[0.06] transition hover:bg-white/10"
           >
-            <div className="text-base font-semibold text-white">AI 市场研究</div>
-            <div className="mt-1 text-xs text-white/50">投研简报 · 每小时更新</div>
-            <div className="mt-4 text-sm text-white/55 leading-relaxed">点击进入标题列表，打开弹窗滚动阅读全文。</div>
-            <div className="mt-4 inline-flex items-center gap-1.5 text-xs text-[color:var(--accent)] group-hover:underline">
-              查看研究报告
-              <ArrowRight className="size-3" />
-            </div>
-          </Link>
-
-          {/* No-container section — just text with accent borders */}
-          <div className="px-1">
-            <div className="text-xs font-medium text-white/50 uppercase tracking-wider">会员权益</div>
-            <div className="mt-3 grid gap-2 text-sm text-white/55">
-              <div className="border-l-2 border-[color:var(--success)]/40 pl-3 py-0.5">实时/准实时信号（触发价/强度）</div>
-              <div className="border-l-2 border-[color:var(--success)]/40 pl-3 py-0.5">完整回测假设、数据版本</div>
-              <div className="border-l-2 border-[color:var(--success)]/40 pl-3 py-0.5">导出/下载与高级筛选</div>
-            </div>
-            <Link
-              to="/pricing"
-              className="mt-4 inline-flex items-center gap-1.5 text-xs text-[color:var(--accent)] hover:underline"
+            重试
+          </button>
+        </div>
+      ) : pairBlocked ? (
+        <div className="rounded-xl bg-[color:var(--card)] p-8 border border-white/[0.06] text-center">
+          <div className="text-sm text-white/80">免费用户仅可查看前 {FREE_PAIR_LIMIT} 个币种的信号</div>
+          <div className="mt-1 text-xs text-white/50">升级会员解锁全部币种</div>
+        </div>
+      ) : groups.length === 0 ? (
+        <div className="rounded-xl bg-[color:var(--card)] p-8 border border-white/[0.06] text-center">
+          <div className="text-sm text-white/55">暂无信号数据</div>
+          {(pairFilter || timeframeFilter) ? (
+            <button
+              type="button"
+              onClick={() => {
+                setPairFilter(null);
+                setTimeframeFilter(null);
+                sp.delete("pair");
+                sp.delete("timeframe");
+                setSp(sp, { replace: true });
+              }}
+              className="mt-3 text-xs text-[color:var(--accent)] hover:underline"
             >
-              查看定价方案
-              <ArrowRight className="size-3" />
-            </Link>
-          </div>
-        </aside>
-      </div>
+              清除筛选条件
+            </button>
+          ) : null}
+        </div>
+      ) : (
+        <div className="grid gap-4">
+          {groups.map((group) => (
+            <PairGroupComponent key={group.pair} group={group} historyLimit={historyLimit} />
+          ))}
+          {!canUnlimited && !pairFilter && totalGroupCount > FREE_PAIR_LIMIT ? (
+            <div className="rounded-xl border border-[color:var(--accent)]/20 bg-[color:var(--accent)]/5 p-5 text-center">
+              <div className="text-sm text-white/80">免费用户仅可查看 {FREE_PAIR_LIMIT} 个币种的信号</div>
+              <div className="mt-1 text-xs text-white/50">升级会员解锁全部币种与完整信号历史</div>
+            </div>
+          ) : null}
+        </div>
+      )}
     </div>
   );
 }

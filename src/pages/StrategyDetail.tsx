@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
 
@@ -10,6 +9,7 @@ import ChartPanel from "@/components/strategy/ChartPanel";
 import BacktestReportPanel from "@/components/strategy/BacktestReportPanel";
 import LockBadge from "@/components/paywall/LockBadge";
 import { useEntitlements } from "@/hooks/useEntitlements";
+import { getStrategyDisplayName } from "@/lib/strategyNames";
 import type { ReactNode } from "react";
 
 type TabKey = "chart" | "backtest";
@@ -36,8 +36,7 @@ export default function StrategyDetail() {
     [strategyId],
   );
 
-  const tabFromUrl = (sp.get("tab") as TabKey) || "chart";
-  const [tab, setTab] = useState<TabKey>(tabFromUrl);
+  const tab = ((sp.get("tab") as TabKey) || "chart") satisfies TabKey;
 
   if (loading) {
     return (
@@ -68,9 +67,11 @@ export default function StrategyDetail() {
   return (
     <div className="grid gap-8">
       <div className="flex items-center gap-2 text-xs text-white/45">
-        <Link to="/" className="hover:text-white hover:underline">首页</Link>
+        <Link to="/" className="hover:text-white hover:underline">信号总览</Link>
         <ChevronRight className="size-3.5 text-white/50" />
-        <div className="truncate text-white/65">{strategy.name}</div>
+        <Link to="/strategies" className="hover:text-white hover:underline">策略来源</Link>
+        <ChevronRight className="size-3.5 text-white/50" />
+        <div className="truncate text-white/65">{getStrategyDisplayName(strategy.name)}</div>
       </div>
 
       <StrategySummaryCard strategy={strategy} backtest={backtest} />
@@ -80,7 +81,6 @@ export default function StrategyDetail() {
         <TabButton
           active={tab === "chart"}
           onClick={() => {
-            setTab("chart");
             sp.set("tab", "chart");
             setSp(sp, { replace: true });
           }}
@@ -90,7 +90,6 @@ export default function StrategyDetail() {
         <TabButton
           active={tab === "backtest"}
           onClick={() => {
-            setTab("backtest");
             sp.set("tab", "backtest");
             setSp(sp, { replace: true });
           }}

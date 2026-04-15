@@ -1,13 +1,15 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 
 import AppShell from "@/components/layout/AppShell";
 import ErrorBoundary from "@/components/layout/ErrorBoundary";
+import { setTrialExpiredHandler } from "@/api/client";
+import { initTrial } from "@/api/trial";
+import { usePaywallStore } from "@/stores/paywallStore";
 
 const Home = lazy(() => import("@/pages/Home"));
-const Signals = lazy(() => import("@/pages/Signals"));
+const Strategies = lazy(() => import("@/pages/Strategies"));
 const StrategyDetail = lazy(() => import("@/pages/StrategyDetail"));
-const Methodology = lazy(() => import("@/pages/Methodology"));
 const MarketResearch = lazy(() => import("@/pages/MarketResearch"));
 const Pricing = lazy(() => import("@/pages/Pricing"));
 const Account = lazy(() => import("@/pages/Account"));
@@ -24,6 +26,15 @@ function PageFallback() {
 }
 
 export default function App() {
+  const openPaywall = usePaywallStore((s) => s.open);
+
+  useEffect(() => {
+    setTrialExpiredHandler(() => {
+      openPaywall({ reason: "trial_expired", returnTo: "/" });
+    });
+    initTrial().catch(() => {});
+  }, [openPaywall]);
+
   return (
     <ErrorBoundary>
     <Router>
@@ -31,9 +42,8 @@ export default function App() {
         <Routes>
           <Route element={<AppShell />}>
             <Route path="/" element={<Home />} />
-            <Route path="/signals" element={<Signals />} />
+            <Route path="/strategies" element={<Strategies />} />
             <Route path="/strategies/:strategyId" element={<StrategyDetail />} />
-            <Route path="/methodology" element={<Methodology />} />
             <Route path="/market-research" element={<MarketResearch />} />
             <Route path="/pricing" element={<Pricing />} />
             <Route path="/account" element={<Account />} />
