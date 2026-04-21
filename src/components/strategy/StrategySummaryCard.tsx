@@ -1,7 +1,7 @@
 import { Info } from "lucide-react";
 
 import type { StrategyRead, BacktestResultRead } from "@/api/types";
-import { formatInt, formatNumber, formatPct } from "@/lib/format";
+import { formatDate, formatInt, formatNumber, formatPct } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 export default function StrategySummaryCard(props: {
@@ -15,6 +15,9 @@ export default function StrategySummaryCard(props: {
   const heroReturn = bt?.total_return ?? s.total_return ?? null;
   const heroValue = heroReturn != null ? formatPct(heroReturn * 100) : null;
   const heroTone = heroReturn != null ? (heroReturn >= 0 ? "up" : "down") : undefined;
+  const heroPeriodLabel = bt?.period_start
+    ? `自 ${formatDate(bt.period_start)} 起累计`
+    : null;
 
   return (
     <div className={cn("rounded-xl bg-[color:var(--card)] border border-white/[0.06]", props.className)}>
@@ -51,6 +54,9 @@ export default function StrategySummaryCard(props: {
             )}>
               {heroValue}
             </div>
+            {heroPeriodLabel ? (
+              <div className="mt-1 text-[11px] text-white/40">{heroPeriodLabel}</div>
+            ) : null}
           </div>
         ) : null}
       </div>

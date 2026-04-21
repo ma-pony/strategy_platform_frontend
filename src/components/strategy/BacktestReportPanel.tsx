@@ -15,8 +15,12 @@ export default function BacktestReportPanel(props: {
 }) {
   const bt = props.backtest;
 
+  const totalReturnLabel = bt.period_start
+    ? `总收益（自 ${formatDate(bt.period_start)} 起）`
+    : "总收益";
+
   const core = [
-    { label: "总收益", value: bt.total_return != null ? formatPct(bt.total_return * 100) : "—" },
+    { label: totalReturnLabel, value: bt.total_return != null ? formatPct(bt.total_return * 100) : "—" },
     { label: "最大回撤", value: bt.max_drawdown != null ? formatPct(-Math.abs(bt.max_drawdown * 100)) : "—" },
     { label: "Sharpe", value: bt.sharpe_ratio != null ? formatNumber(bt.sharpe_ratio, 2) : "—" },
     { label: "交易次数", value: bt.trade_count != null ? formatInt(bt.trade_count) : "—" },
